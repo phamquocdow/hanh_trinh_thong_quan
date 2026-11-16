@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Mini game trắc nghiệm pixel 8-bit về Hải quan – Logistics đường biển">
+<title>CUSTOMS GUARDIAN: SEA ROUTE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap&subset=vietnamese" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+  <!-- HUD -->
+  <header id="hud">
+    <div class="hud-l"><span class="pf lbl">TEU</span><span id="score" class="pf val">000000</span><span id="combo" class="pf combo hidden">x2</span></div>
+    <div id="lives" title="Phao cứu sinh 🛟"></div>
+    <div class="hud-r"><span class="pf lbl">HI</span><span id="hiHud" class="pf val small">000000</span><button id="btnSound" class="iconbtn" title="Bật/tắt âm thanh (phím M)" aria-label="Bật/tắt âm thanh">🔊</button></div>
+  </header>
+  <div id="route" class="route"></div>
+
+  <!-- SCENE -->
+  <div id="scene" class="world" data-stage="1">
+    <div class="sky"></div>
+    <div class="stars" id="stars"></div>
+    <div class="sun" data-sprite="sun"></div>
+    <div class="clouds"></div>
+    <div class="gulls"></div>
+    <div id="props"></div>
+    <div class="sea"></div>
+    <div class="wave w1"></div>
+    <div class="boss hidden" id="boss"><div class="hp"><div class="nm">☠ TÀU BUÔN LẬU</div><div class="bar" id="bossBar"></div></div><div class="bob" data-sprite="boss"></div></div>
+    <div class="wave w2"></div>
+    <div id="player"><div class="bob" data-sprite="player"></div><div class="beam"></div></div>
+    <div class="wave w3"></div>
+    <div id="fx"></div>
+  </div>
+
+  <!-- PANEL -->
+  <main id="panel">
+    <div id="qhead">
+      <div><div id="stageTag" class="pf">STAGE 1</div><div id="stageName">—</div></div>
+      <div id="timerBox">
+        <div id="compass">
+          <svg viewBox="0 0 32 32" shape-rendering="crispEdges">
+            <rect x="6" y="2" width="20" height="28" fill="#0b1530"/><rect x="2" y="6" width="28" height="20" fill="#0b1530"/><rect x="4" y="4" width="24" height="24" fill="#0b1530"/>
+            <rect x="7" y="4" width="18" height="24" fill="#FBC02D"/><rect x="4" y="7" width="24" height="18" fill="#FBC02D"/><rect x="5" y="5" width="22" height="22" fill="#FBC02D"/>
+            <rect x="8" y="6" width="16" height="20" fill="#13306b"/><rect x="6" y="8" width="20" height="16" fill="#13306b"/><rect x="7" y="7" width="18" height="18" fill="#13306b"/>
+            <rect x="15" y="6" width="2" height="3" fill="#ff5252"/><rect x="15" y="23" width="2" height="3" fill="#fff"/><rect x="6" y="15" width="3" height="2" fill="#fff"/><rect x="23" y="15" width="3" height="2" fill="#fff"/>
+            <g class="needle"><rect x="15" y="9" width="2" height="7" fill="#ff5252"/><rect x="14" y="11" width="4" height="4" fill="#ff5252"/><rect x="15" y="16" width="2" height="7" fill="#eceff1"/><rect x="14" y="17" width="4" height="4" fill="#eceff1"/><rect x="15" y="15" width="2" height="2" fill="#0b1530"/></g>
+          </svg>
+        </div>
+        <div><div id="tnum" class="pf">20</div><div class="tl">GIÂY</div></div>
+      </div>
+    </div>
+    <div id="tbar"></div>
+    <div id="radar" title="Chạm để hiện ngay câu hỏi"><div class="sweep"></div><div class="qmeta" id="qnum">CÂU 1/10</div><div id="qtext"></div></div>
+    <div id="answers"></div>
+    <div id="lifelines">
+      <button class="life" data-l="scope"><b>🔭</b><span>ỐNG NHÒM</span><small>Loại 2 đáp án sai</small></button>
+      <button class="life" data-l="radar"><b>📡</b><span>RADAR</span><small>+10 giây</small></button>
+      <button class="life" data-l="dog"><b>🐕</b><span>CHÓ NGHIỆP VỤ</span><small>Đánh hơi đáp án</small></button>
+    </div>
+    <div class="hintline">Phím A/B/C/D hoặc 1–4 để chọn · ENTER để tiếp · M bật/tắt âm</div>
+  </main>
+
+  <!-- DIALOG -->
+  <div id="dialog" class="hidden">
+    <div class="dlg-box">
+      <div class="dlg-portrait" data-sprite="officer"></div>
+      <div class="dlg-main">
+        <div class="dlg-name pf" id="dlgName">CHÍNH XÁC!</div>
+        <div class="dlg-verdict" id="dlgVerdict"></div>
+        <div class="dlg-label">📜 GIẢI THÍCH &amp; CĂN CỨ PHÁP LÝ</div>
+        <div id="dlgText"></div>
+        <div class="dlg-foot"><button class="pbtn next" id="btnNext">TIẾP ▶</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- START -->
+  <section id="startScreen" class="overlay">
+    <div class="world" data-stage="0">
+      <div class="sky"></div>
+      <div class="sun" data-sprite="sun" style="--u:5px"></div>
+      <div class="clouds"></div>
+      <div class="gulls"></div>
+      <div class="sea"></div>
+      <div class="wave w1"></div>
+      <div class="wave w2"></div>
+      <div id="startShips"><div class="bob" data-sprite="player" style="--u:3px"></div><div class="bob" data-sprite="cship" style="--u:4px"></div></div>
+      <div class="wave w3"></div>
+    </div>
+    <div class="start-ui">
+      <div class="logo"><div class="pf l1">CUSTOMS GUARDIAN</div><div class="pf l2">: SEA ROUTE :</div><div class="sub">Hải quan · Logistics đường biển</div></div>
+      <div class="menu">
+        <button class="pbtn" id="btnStart">⚓ RA KHƠI</button>
+        <button class="pbtn alt" id="btnHow">📜 HƯỚNG DẪN</button>
+        <button class="pbtn ghost" id="btnSnd2">🔊 ÂM THANH: BẬT</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="chkShuffle"> Xáo trộn thứ tự đáp án</label>
+      <div class="hi">KỶ LỤC: <span id="hiStart" class="pf">000000</span> TEU</div>
+      <div class="blinktxt">Nhấn ENTER để ra khơi</div>
+    </div>
+  </section>
+
+  <!-- HOW TO -->
+  <section id="howto" class="overlay modal hidden">
+    <div class="dlg-box">
+      <div class="dlg-name pf">HƯỚNG DẪN</div>
+      <ul>
+        <li>Bạn là <b>thuyền trưởng kiêm công chức hải quan</b>, lái tàu tuần tra hộ tống lô hàng qua 4 vùng biển: Cảng xuất phát → Cảng kiểm hóa → Kho ngoại quan → Vùng biển đêm (BOSS).</li>
+        <li>Mỗi câu có 4 container A, B, C, D. Chọn bằng chuột/chạm hoặc phím <b>A/B/C/D</b> (hoặc <b>1–4</b>).</li>
+        <li>⏱ 20 giây mỗi câu (la bàn + thanh thời gian). Sai hoặc hết giờ: mất 1 phao cứu sinh 🛟. Hết 3 phao: <b>tàu chìm</b>!</li>
+        <li>Điểm tính bằng <b>TEU</b>: đúng +100, còn trên 10 giây thưởng +50, chuỗi đúng liên tiếp nhân <b>x2</b>, từ câu thứ 3 liên tiếp nhân <b>x3</b>.</li>
+        <li>Trợ giúp (mỗi loại 1 lần): 🔭 Ống nhòm loại 2 đáp án sai · 📡 Radar +10 giây · 🐕 Chó nghiệp vụ đánh hơi đáp án có khả năng đúng nhất.</li>
+        <li>Màn BOSS: mỗi câu đúng bắn pháo hiệu vào tàu buôn lậu. Đúng hết để chặn bắt và áp giải!</li>
+      </ul>
+      <h3 class="pf">CẤP BẬC</h3>
+      <ul>
+        <li>0–3 câu đúng: Thủy thủ tập sự</li><li>4–6: Sĩ quan boong</li><li>7–8: Thuyền trưởng tuần tra</li><li>9–10: Đô đốc Hải quan</li>
+      </ul>
+      <div class="dlg-foot"><button class="pbtn" id="btnHowClose">ĐÃ HIỂU ✔</button></div>
+    </div>
+  </section>
+
+  <!-- STAGE INTRO -->
+  <section id="intro" class="overlay hidden">
+    <div class="intro-box">
+      <div class="pf warn hidden" id="introWarn">!! WARNING !!</div>
+      <div class="pf intro-stage" id="introStage">STAGE 1</div>
+      <div class="intro-name" id="introName">CẢNG XUẤT PHÁT</div>
+      <div class="intro-phase" id="introPhase">TRƯỚC THÔNG QUAN</div>
+      <div class="route" id="introRoute"></div>
+      <div class="intro-desc" id="introDesc"></div>
+      <button class="pbtn" id="btnGo">VÀO CẢNG ▶</button>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section id="end" class="overlay hidden">
+    <div class="end-box">
+      <div class="pf end-title" id="endTitle">GAME OVER</div>
+      <div class="end-sub" id="endSub"></div>
+      <div id="endArt"></div>
+      <div class="stats">
+        <span>Tổng điểm</span><b id="stScore">0 TEU</b>
+        <span>Số câu đúng</span><b id="stCorrect">0/10</b>
+        <span>Chuỗi đúng dài nhất</span><b id="stStreak">0</b>
+        <span>Kỷ lục</span><b id="stHi">0 TEU</b>
+      </div>
+      <div class="newrec pf hidden" id="newRec">NEW RECORD!</div>
+      <div class="rank"><div class="rank-ico" id="rankIco">⚓</div><div><div class="rank-lbl">CẤP BẬC ĐẠT ĐƯỢC</div><div class="rank-name" id="rankName">—</div></div></div>
+      <label class="chk"><input type="checkbox" id="chkShuffle2"> Xáo trộn thứ tự đáp án</label>
+      <div class="end-btns"><button class="pbtn" id="btnAgain">↻ CHƠI LẠI</button><button class="pbtn alt" id="btnMenu">⚓ VỀ CẢNG</button></div>
+    </div>
+  </section>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
