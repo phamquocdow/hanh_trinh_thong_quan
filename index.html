@@ -16,7 +16,7 @@
   <header id="hud">
     <div class="hud-l"><span class="pf lbl">TEU</span><span id="score" class="pf val">000000</span><span id="combo" class="pf combo hidden">x2</span></div>
     <div id="lives" title="Phao cứu sinh 🛟"></div>
-    <div class="hud-r"><span class="pf lbl">HI</span><span id="hiHud" class="pf val small">000000</span><button id="btnSound" class="iconbtn" title="Bật/tắt âm thanh (phím M)" aria-label="Bật/tắt âm thanh">🔊</button></div>
+    <div class="hud-r"><span class="pf lbl">HI</span><span id="hiHud" class="pf val small">000000</span><button id="btnSound" class="iconbtn" title="Bật/tắt âm thanh (phím M)" aria-label="Bật/tắt âm thanh">🔊</button><button id="btnFull" class="iconbtn" title="Toàn màn hình (phím F)" aria-label="Toàn màn hình">⛶</button></div>
   </header>
   <div id="route" class="route"></div>
 
@@ -57,12 +57,13 @@
     <div id="tbar"></div>
     <div id="radar" title="Chạm để hiện ngay câu hỏi"><div class="sweep"></div><div class="qmeta" id="qnum">CÂU 1/10</div><div id="qtext"></div></div>
     <div id="answers"></div>
+    <div class="reveal-row"><button class="pbtn reveal" id="btnReveal" disabled>🔍 HIỆN ĐÁP ÁN</button></div>
     <div id="lifelines">
       <button class="life" data-l="scope"><b>🔭</b><span>ỐNG NHÒM</span><small>Loại 2 đáp án sai</small></button>
       <button class="life" data-l="radar"><b>📡</b><span>RADAR</span><small>+10 giây</small></button>
       <button class="life" data-l="dog"><b>🐕</b><span>CHÓ NGHIỆP VỤ</span><small>Đánh hơi đáp án</small></button>
     </div>
-    <div class="hintline">Phím A/B/C/D hoặc 1–4 để chọn · ENTER để tiếp · M bật/tắt âm</div>
+    <div class="hintline">Phím A/B/C/D hoặc 1–4 để chọn · ENTER hiện đáp án / tiếp · M bật/tắt âm · F toàn màn hình</div>
   </main>
 
   <!-- DIALOG -->
@@ -98,6 +99,7 @@
         <button class="pbtn" id="btnStart">⚓ RA KHƠI</button>
         <button class="pbtn alt" id="btnHow">📜 HƯỚNG DẪN</button>
         <button class="pbtn ghost" id="btnSnd2">🔊 ÂM THANH: BẬT</button>
+        <button class="pbtn ghost" id="btnFull2">⛶ TOÀN MÀN HÌNH</button>
       </div>
       <label class="chk"><input type="checkbox" id="chkShuffle"> Xáo trộn thứ tự đáp án</label>
       <div class="hi">KỶ LỤC: <span id="hiStart" class="pf">000000</span> TEU</div>
@@ -111,7 +113,8 @@
       <div class="dlg-name pf">HƯỚNG DẪN</div>
       <ul>
         <li>Bạn là <b>thuyền trưởng kiêm công chức hải quan</b>, lái tàu tuần tra hộ tống lô hàng qua 4 vùng biển: Cảng xuất phát → Cảng kiểm hóa → Kho ngoại quan → Vùng biển đêm (BOSS).</li>
-        <li>Mỗi câu có 4 container A, B, C, D. Chọn bằng chuột/chạm hoặc phím <b>A/B/C/D</b> (hoặc <b>1–4</b>).</li>
+        <li>Mỗi câu có 4 container A, B, C, D hiện cùng câu hỏi. Chọn bằng chuột/chạm hoặc phím <b>A/B/C/D</b> (hoặc <b>1–4</b>), có thể đổi lựa chọn. Bấm <b>🔍 HIỆN ĐÁP ÁN</b> (hoặc ENTER) để công bố đáp án đúng.</li>
+        <li>Bấm HIỆN ĐÁP ÁN khi chưa chọn: chỉ xem đáp án, không cộng điểm, không mất phao.</li>
         <li>⏱ 20 giây mỗi câu (la bàn + thanh thời gian). Sai hoặc hết giờ: mất 1 phao cứu sinh 🛟. Hết 3 phao: <b>tàu chìm</b>!</li>
         <li>Điểm tính bằng <b>TEU</b>: đúng +100, còn trên 10 giây thưởng +50, chuỗi đúng liên tiếp nhân <b>x2</b>, từ câu thứ 3 liên tiếp nhân <b>x3</b>.</li>
         <li>Trợ giúp (mỗi loại 1 lần): 🔭 Ống nhòm loại 2 đáp án sai · 📡 Radar +10 giây · 🐕 Chó nghiệp vụ đánh hơi đáp án có khả năng đúng nhất.</li>

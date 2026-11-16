@@ -254,7 +254,7 @@ function paintSprites(root = document) {
 }
 function decorate(world) {
   const cl = world.querySelector('.clouds'), gl = world.querySelector('.gulls');
-  const cpal = { W: 'rgba(255,243,238,.92)', v: 'rgba(255,205,195,.85)' };
+  const cpal = { W: 'rgba(255,255,255,.95)', v: 'rgba(200,230,255,.9)' };
   [[8, 46, 3], [16, 70, 2], [28, 34, 3], [22, 58, 2]].forEach(([top, dur, u], i) => {
     const d = document.createElement('div');
     d.className = 'cloud'; d.style.cssText = `top:${top}%;--u:${u}px;animation-duration:${dur}s;animation-delay:-${i * 13}s`;
@@ -444,7 +444,8 @@ function setLight(state) {
   tl.classList.add(state);
 }
 function fitScene() {
-  const u = (scene.clientHeight < 230 || scene.clientWidth < 600) ? 2 : 3;
+  const h = scene.clientHeight, w = scene.clientWidth;
+  const u = (h < 230 || w < 600) ? 2 : (h >= 380 && w >= 1200) ? 4 : 3;
   scene.style.setProperty('--u', u + 'px');
   player.style.setProperty('--u', u + 'px');
   bossEl.style.setProperty('--u', (u + 1) + 'px');
@@ -509,9 +510,11 @@ function askQuestion() {
   $('qnum').textContent = `> CÂU ${S.i + 1}/${S.list.length}  ·  ${pad(S.score)} TEU`;
   answersEl.innerHTML = '';
   $('panel').scrollTop = 0;
+  S.sel = -1;
+  // 4 đáp án hiện ngay cùng câu hỏi
   q.opts.forEach((o, k) => {
     const b = document.createElement('button');
-    b.className = 'ans pending'; b.dataset.k = k;
+    b.className = 'ans drop'; b.dataset.k = k; b.style.animationDelay = (k * 70) + 'ms';
     b.innerHTML = `<span class="tag">${'ABCD'[k]}</span><span class="txt"></span><span class="lock"></span>`;
     b.querySelector('.txt').textContent = o.text;
     b.addEventListener('click', () => choose(k));
@@ -519,11 +522,28 @@ function askQuestion() {
   });
   if (q.stage === 2) setLight(q.light || ['green', 'yellow', 'red'][(S.i - S.stageStart[2]) % 3]);
   S.remain = CONFIG.TIME * 1000; S.maxT = S.remain; renderTimer();
-  updateLifelines();
+  updateLifelines(); renderReveal();
   typeText(qtext, q.question, CONFIG.TYPE_SPEED, () => {
-    answersEl.querySelectorAll('.ans').forEach((b, k) => { b.classList.remove('pending'); b.classList.add('drop'); b.style.animationDelay = (k * 70) + 'ms'; });
-    S.phase = 'asking'; updateLifelines(); startTimer();
+    S.phase = 'asking'; updateLifelines(); renderReveal(); startTimer();
   });
+}
+/* Nút HIỆN ĐÁP ÁN: chọn đáp án chỉ đánh dấu, bấm nút mới công bố đúng/sai */
+function renderReveal() {
+  const b = $('btnReveal');
+  b.disabled = !(S.phase === 'typing' || S.phase === 'asking');
+  b.textContent = S.sel >= 0 ? `🔍 HIỆN ĐÁP ÁN · ĐÃ CHỌN ${'ABCD'[S.sel]}` : '🔍 HIỆN ĐÁP ÁN';
+  b.classList.toggle('armed', S.sel >= 0 && !b.disabled);
+}
+function markSelected() {
+  [...answersEl.children].forEach((b, j) => b.classList.toggle('selected', j === S.sel));
+}
+function reveal() {
+  if (S.phase === 'typing') finishType();
+  if (S.phase !== 'asking') return;
+  stopTimer(); S.phase = 'answered';
+  const q = S.list[S.i];
+  if (S.sel < 0) resolve(false, -1, false, true);
+  else resolve(S.sel === q.correctIdx, S.sel, false);
 }
 function startTimer() {
   stopTimer();
@@ -550,19 +570,23 @@ function renderTimer() {
   $('compass').style.setProperty('--spin', sec <= 5 ? '.5s' : sec <= 10 ? '1.4s' : '3s');
 }
 function choose(k) {
+  if (S.phase === 'typing') finishType();
   if (S.phase !== 'asking') return;
   const b = answersEl.children[k];
   if (!b || b.disabled) return;
-  stopTimer(); S.phase = 'answered';
-  resolve(k === S.list[S.i].correctIdx, k, false);
+  S.sel = k; markSelected(); renderReveal();
+  Sound.click();
 }
 function onTimeout() {
   if (S.phase !== 'asking') return;
   stopTimer(); S.remain = 0; renderTimer(); S.phase = 'answered';
-  resolve(false, -1, true);
+  // hết giờ: nếu đã chọn thì chấm đáp án đã chọn
+  if (S.sel >= 0) resolve(S.sel === S.list[S.i].correctIdx, S.sel, false);
+  else resolve(false, -1, true);
 }
-function resolve(ok, k, timeout) {
+function resolve(ok, k, timeout, skipped = false) {
   const q = S.list[S.i];
+  renderReveal();
   [...answersEl.children].forEach((b, j) => {
     b.disabled = true;
     if (j === q.correctIdx) b.classList.add('correct');
@@ -581,6 +605,11 @@ function resolve(ok, k, timeout) {
     if (q.stage === 2) setLight('green');
     if (!bossEl.classList.contains('hidden')) fireFlare(() => { S.bossHP = Math.max(0, S.bossHP - 1); renderBoss(); });
     verdict = `+${gained} TEU` + (bonus ? `  ·  ⚡ THƯỞNG TỐC ĐỘ +${CONFIG.BONUS}` : '') + (mult() > 1 ? `  ·  🔥 COMBO x${mult()}` : '');
+  } else if (skipped) {
+    // bấm HIỆN ĐÁP ÁN khi chưa chọn: chỉ công bố, không cộng điểm, không mất phao
+    S.streak = 0; renderCombo();
+    Sound.bell(); flash('rgba(255,235,59,.35)');
+    verdict = `Đáp án đúng: ${'ABCD'[q.correctIdx]}. ${q.opts[q.correctIdx].text}`;
   } else {
     S.streak = 0; renderCombo();
     S.lives = Math.max(0, S.lives - 1); loseLifeUI();
@@ -589,13 +618,13 @@ function resolve(ok, k, timeout) {
     const L = 'ABCD'[q.correctIdx];
     verdict = `Đáp án đúng: ${L}. ${q.opts[q.correctIdx].text}  ·  -1 🛟` + (S.lives === 0 ? '  ·  HẾT PHAO!' : '');
   }
-  setTimeout(() => showDialog(ok, timeout, verdict, q), ok ? 750 : 950);
+  setTimeout(() => showDialog(ok, timeout, verdict, q, skipped), ok || skipped ? 1100 : 950);
 }
-function showDialog(ok, timeout, verdict, q) {
+function showDialog(ok, timeout, verdict, q, skipped) {
   S.phase = 'review';
   const nm = $('dlgName');
-  nm.className = 'dlg-name pf' + (ok ? '' : timeout ? ' time' : ' bad');
-  nm.textContent = ok ? 'CHÍNH XÁC!' : timeout ? 'HẾT GIỜ!' : 'SAI RỒI!';
+  nm.className = 'dlg-name pf' + (ok ? '' : (timeout || skipped) ? ' time' : ' bad');
+  nm.textContent = ok ? 'CHÍNH XÁC!' : skipped ? 'ĐÁP ÁN' : timeout ? 'HẾT GIỜ!' : 'SAI RỒI!';
   $('dlgVerdict').textContent = verdict;
   const last = S.i >= S.list.length - 1;
   $('btnNext').textContent = S.lives <= 0 ? 'XEM KẾT QUẢ ▶' : last ? 'VỀ ĐÍCH ▶' : 'TIẾP ▶';
@@ -689,7 +718,8 @@ function useLife(k) {
   S.used[k] = true; Sound.power();
   if (k === 'scope') {
     const wrong = btns.map((b, j) => j).filter(j => j !== q.correctIdx && !btns[j].disabled);
-    wrong.sort(() => Math.random() - 0.5).slice(0, 2).forEach(j => { btns[j].classList.add('elim'); btns[j].disabled = true; btns[j].classList.remove('sniff'); });
+    wrong.sort(() => Math.random() - 0.5).slice(0, 2).forEach(j => { btns[j].classList.add('elim'); btns[j].disabled = true; btns[j].classList.remove('sniff'); if (S.sel === j) S.sel = -1; });
+    markSelected(); renderReveal();
     toast('🔭 Ống nhòm: đã loại 2 đáp án sai!');
   } else if (k === 'radar') {
     S.remain += CONFIG.RADAR_PLUS * 1000; S.maxT = Math.max(S.maxT, S.remain); renderTimer();
@@ -732,8 +762,28 @@ $('btnHow').addEventListener('click', () => { Sound.init(); Sound.click(); $('ho
 $('btnHowClose').addEventListener('click', () => { Sound.click(); $('howto').classList.add('hidden'); });
 $('btnSnd2').addEventListener('click', toggleSound);
 $('btnSound').addEventListener('click', toggleSound);
+
+/* ===================== TOÀN MÀN HÌNH ===================== */
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function toggleFull() {
+  const d = document, el = d.documentElement;
+  try {
+    if (!fsEl()) { const p = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el); p && p.catch && p.catch(() => {}); }
+    else { const p = (d.exitFullscreen || d.webkitExitFullscreen)?.call(d); p && p.catch && p.catch(() => {}); }
+  } catch (e) { /* trình duyệt không hỗ trợ */ }
+}
+function renderFullBtns() {
+  const on = !!fsEl();
+  $('btnFull').textContent = on ? '🗗' : '⛶';
+  $('btnFull2').textContent = on ? '🗗 THOÁT TOÀN MÀN HÌNH' : '⛶ TOÀN MÀN HÌNH';
+}
+$('btnFull').addEventListener('click', toggleFull);
+$('btnFull2').addEventListener('click', toggleFull);
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => { renderFullBtns(); fitScene(); }));
+if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) { $('btnFull').classList.add('hidden'); $('btnFull2').classList.add('hidden'); }
 $('btnGo').addEventListener('click', beginStage);
 $('btnNext').addEventListener('click', next);
+$('btnReveal').addEventListener('click', reveal);
 $('btnAgain').addEventListener('click', () => { $('chkShuffle').checked = $('chkShuffle2').checked; startGame(); });
 $('btnMenu').addEventListener('click', () => { Sound.click(); $('chkShuffle').checked = $('chkShuffle2').checked; showMenu(); });
 $('radar').addEventListener('click', () => { if (S.phase === 'typing') finishType(); });
@@ -743,12 +793,14 @@ document.addEventListener('keydown', e => {
   if (e.repeat) return;
   const k = e.key.toLowerCase();
   if (k === 'm') return toggleSound();
+  if (k === 'f') return toggleFull();
   if (!$('howto').classList.contains('hidden')) { if (k === 'escape' || k === 'enter') $('howto').classList.add('hidden'); return; }
   const go = k === 'enter' || k === ' ';
   if (S.phase === 'menu') { if (k === 'enter') startGame(); return; }
   if (S.phase === 'intro') { if (go) { e.preventDefault(); beginStage(); } return; }
-  if (S.phase === 'typing') { if (go || /^[abcd1-4]$/.test(k)) { e.preventDefault(); finishType(); } return; }
-  if (S.phase === 'asking') { const map = { a: 0, b: 1, c: 2, d: 3, 1: 0, 2: 1, 3: 2, 4: 3 }; if (k in map) { e.preventDefault(); choose(map[k]); } return; }
+  const map = { a: 0, b: 1, c: 2, d: 3, 1: 0, 2: 1, 3: 2, 4: 3 };
+  if (S.phase === 'typing') { if (k in map) { e.preventDefault(); choose(map[k]); } else if (go) { e.preventDefault(); finishType(); } return; }
+  if (S.phase === 'asking') { if (k in map) { e.preventDefault(); choose(map[k]); } else if (go) { e.preventDefault(); reveal(); } return; }
   if (S.phase === 'review') { if (go || k === 'n') { e.preventDefault(); next(); } return; }
   if (S.phase === 'end') { if (k === 'enter') { $('chkShuffle').checked = $('chkShuffle2').checked; startGame(); } }
 });
@@ -757,9 +809,9 @@ window.addEventListener('resize', fitScene);
 /* ===================== KHỞI TẠO ===================== */
 (function init() {
   const root = document.documentElement.style;
-  root.setProperty('--wv1', waveURI('#4DD0E1', '#e0f7fa', '#1E88E5'));
-  root.setProperty('--wv2', waveURI('#81d4fa', '#ffffff', '#1565c0'));
-  root.setProperty('--wv3', waveURI('#4DD0E1', '#ffffff', '#0D47A1'));
+  root.setProperty('--wv1', waveURI('#80deea', '#ffffff', '#29b6f6'));
+  root.setProperty('--wv2', waveURI('#b3e5fc', '#ffffff', '#039be5'));
+  root.setProperty('--wv3', waveURI('#4dd0e1', '#ffffff', '#0288d1'));
   paintSprites();
   document.querySelectorAll('.world').forEach(decorate);
   const prefs = Store.get(CONFIG.PREF_KEY, {});
